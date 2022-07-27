@@ -9,7 +9,7 @@ WORKDIR /kdb/src/app
 COPY package.json ./
 
 # Install deps inside container
-RUN apt-get update & npm install
+RUN npm install --force
 
 CMD ["npm", "start"]
 
