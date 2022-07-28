@@ -11,6 +11,9 @@ import {
   paginate,
   Pagination,
 } from 'nestjs-typeorm-paginate';
+import { AuthService } from 'src/auth/service/auth.service';
+// import * as bcrypt from 'bcryptjs';
+
 const bcrypt = require('bcrypt');
 
 @Injectable()
@@ -18,6 +21,7 @@ export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    private authService: AuthService,
   ) {}
 
   create(newUser: UserI): Observable<UserI> {
@@ -25,39 +29,41 @@ export class UserService {
       switchMap((exists: boolean) => {
         if (!exists) {
           return this.hashPassword(newUser.password).pipe(
-            switchMap((passwordHash: string) => {
-              // overwrite the user password with the hash, to store the hash in the database
-              newUser.password === passwordHash;
+            switchMap((hashedPassword: string) => {
+              newUser.password = hashedPassword;
               return from(this.userRepository.save(newUser)).pipe(
-                switchMap((user: UserI) => {
-                  console.log(user);
-                  return this.findOne(user.id);
-                }),
+                switchMap((user: UserI) => this.findOne(user.id)),
               );
             }),
           );
         } else {
-          throw new HttpException('Email already exists', HttpStatus.CONFLICT);
+          throw new HttpException(
+            'User already exists',
+            HttpStatus.BAD_REQUEST,
+          );
         }
       }),
     );
   }
 
-  //   refactor this to use JWT
-  login(user: UserI): Observable<boolean> {
+  login(user: UserI): Observable<string> {
     return this.findByEmail(user.email).pipe(
       switchMap((foundUser: UserI) => {
-        console.log(foundUser);
         if (foundUser) {
           return this.validatePassword(user.password, foundUser.password).pipe(
-            switchMap((isValid: boolean) => {
-              if (isValid) {
-                // return of(true);
-                return this.findOne(foundUser.id).pipe(mapTo(true));
+            switchMap((matches: boolean) => {
+              if (matches) {
+                return this.findOne(foundUser.id).pipe(
+                  switchMap((user: UserI) => {
+                    const token = this.authService.generateJWT(user);
+                    console.log(`This is jwt token  \n\n\n ${token}`);
+                    return token;
+                  }),
+                );
               } else {
                 throw new HttpException(
                   'Invalid password',
-                  HttpStatus.UNAUTHORIZED,
+                  HttpStatus.BAD_REQUEST,
                 );
               }
             }),
@@ -76,8 +82,8 @@ export class UserService {
   private validatePassword(
     password: string,
     storedPasswordHash: string,
-  ): Observable<any> {
-    return from(bcrypt.compare(password, storedPasswordHash));
+  ): Observable<any | boolean> {
+    return of<any | boolean>(bcrypt.compare(password, storedPasswordHash));
   }
 
   //   also return the password hash
@@ -91,7 +97,7 @@ export class UserService {
   }
 
   private hashPassword(password: string): Observable<string> {
-    return from<string>(bcrypt.hash(password, 12));
+    return from<string>(bcrypt.hash(password, 10));
   }
 
   private findOne(id: number): Observable<UserI> {
