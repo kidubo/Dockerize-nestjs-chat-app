@@ -15,33 +15,44 @@ import { UserService } from 'src/user/service/user.service';
   cors: { origin: ['https://hoppscotch.io', 'http://localhost:3000'] },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server;
+
+  title: string[] = [];
+
   constructor(
     private authService: AuthService,
     private userService: UserService,
   ) {}
-  @WebSocketServer()
-  server;
 
-  // @SubscribeMessage('message')
-  // handleMessage(client: any, payload: any): string {
-  //   this.server.emit('message', 'test');
-  //   return 'Hello world!';
-  // }
-
-  handleConnection(socket: Socket) {
+  async handleConnection(socket: Socket) {
     try {
-      const decodedToken = this.authService.verifyJwt(
+      const decodedToken = await this.authService.verifyJwt(
         socket.handshake.headers.authorization,
       );
-      // const user: UserI = this.userService.getOne(decodedToken.user.id);
+
+      // validate the user with adding the jwt and checking it onHandle in nest Gateway
+      const user: UserI = await this.userService.getOne(decodedToken.user.id);
+
+      if (!user) {
+        // disconnect
+        return this.disconnect(socket);
+      } else {
+        this.title.push('Value', Math.random().toString());
+        this.server.emit('message', this.title);
+      }
     } catch {
-      console.log('Invalid token');
+      // disconnect
+      return this.disconnect(socket);
     }
-    this.server.emit('message', 'test');
-    console.log('Client connected');
   }
 
-  handleDisconnect() {
-    console.log('Client disconnected');
+  handleDisconnect(socket: Socket) {
+    socket.disconnect();
+  }
+
+  private disconnect(socket: Socket) {
+    socket.emit('Error', 'new UnauthorizedError("Unauthorized")');
+    socket.disconnect();
   }
 }
