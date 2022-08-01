@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { Observable, of, switchMap, map } from 'rxjs';
 import { CreateUserDto } from '../dtos/create-user.dto';
@@ -6,7 +7,6 @@ import { UserService } from '../service/user.service';
 import { UserHelperService } from '../service/user-helper-service/user-helper-service.service';
 import { Pagination } from 'nestjs-typeorm-paginate';
 import { UserLoginDto } from '../dtos/user-login.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { LoginResponseI } from '../entities/login-res.interface';
 import { JwtAuthGuard } from '../../auth/guard/jwt.guard';
 
@@ -24,7 +24,7 @@ export class UserController {
       .pipe(switchMap((user: UserI) => this.userService.create(user)));
   }
 
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Get()
   findAll(
     @Query('page') page: number,

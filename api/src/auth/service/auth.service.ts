@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -19,5 +20,9 @@ export class AuthService {
 
   comparePassword(password: string, hash: string): Observable<any> {
     return from<any>(bcrypt.compare(password, hash));
+  }
+
+  verifyJwt(jwt: string): Promise<any> {
+    return this.jwtService.verifyAsync(jwt);
   }
 }

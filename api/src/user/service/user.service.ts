@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -56,7 +57,6 @@ export class UserService {
                 return this.findOne(foundUser.id).pipe(
                   switchMap((user: UserI) => {
                     const token = this.authService.generateJWT(user);
-                    console.log(`This is jwt token  \n\n\n ${token}`);
                     return token;
                   }),
                 );
@@ -98,6 +98,10 @@ export class UserService {
 
   private hashPassword(password: string): Observable<string> {
     return from<string>(bcrypt.hash(password, 10));
+  }
+
+  public getOne(id: number): Promise<UserI> {
+    return this.userRepository.findOneOrFail({ where: { id: id } });
   }
 
   private findOne(id: number): Observable<UserI> {
