@@ -1,5 +1,6 @@
 import {
   BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -7,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-// import * as bcrypt from 'bcryptjs';
 import { RoomEntity } from '../../chat/entities/room.entity';
 
 @Entity()
@@ -24,10 +24,6 @@ export class UserEntity {
   @Column({ select: false })
   password: string;
 
-  emailToLowerCase(): void {
-    this.email = this.email.toLowerCase();
-  }
-
   @ManyToMany(() => RoomEntity, (room) => room.users)
   rooms: RoomEntity[];
 
@@ -36,4 +32,11 @@ export class UserEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  emailToLowerCase(): void {
+    this.email = this.email.toLowerCase();
+    this.username = this.username.toLocaleLowerCase();
+  }
 }

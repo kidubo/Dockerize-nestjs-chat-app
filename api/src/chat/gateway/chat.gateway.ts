@@ -10,6 +10,7 @@ import { Socket } from 'socket.io';
 import { AuthService } from 'src/auth/service/auth.service';
 import { UserI } from 'src/user/entities/user.interface';
 import { UserService } from 'src/user/service/user.service';
+import { PageI } from '../entities/page.interface';
 import { RoomI } from '../entities/room.interface';
 import { RoomService } from '../service/room-service/room/room.service';
 
@@ -31,12 +32,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const decodedToken = await this.authService.verifyJwt(
         socket.handshake.headers.authorization,
       );
-
       // validate the user with adding the jwt and checking it onHandle in nest Gateway
       const user: UserI = await this.userService.getOne(decodedToken.user.id);
-
       if (!user) {
-        // disconnect
         return this.disconnect(socket);
       } else {
         socket.data.user = user;
@@ -45,11 +43,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           limit: 10,
         });
 
+        rooms.meta.currentPage = rooms.meta.currentPage - 1;
         // only emit rooms to the specific connected user / client
         return this.server.to(socket.id).emit('rooms', rooms);
       }
     } catch {
-      // disconnect
       return this.disconnect(socket);
     }
   }
@@ -66,5 +64,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('createRoom')
   async onCreateRoom(socket: Socket, room: RoomI): Promise<RoomI> {
     return this.roomService.create(room, socket.data.user);
+  }
+
+  @SubscribeMessage('paginateRoom')
+  async onPaginateRoom(socket: Socket, page: PageI) {
+    page.limit = page.limit > 100 ? 100 : page.limit;
+    page.page = page.page + 1;
+    const rooms = await this.roomService.getRoomsForUser(
+      socket.data.user.id,
+      page,
+    );
+
+    return this.server.to(socket.id).emit('rooms', rooms);
   }
 }

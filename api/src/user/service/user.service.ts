@@ -1,20 +1,15 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-var-requires */
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { UserEntity } from '../entities/user.entity';
 import { UserI } from '../entities/user.interface';
-import { from, Observable, of } from 'rxjs';
-import { map, mapTo, switchMap } from 'rxjs/operators';
 import {
   IPaginationOptions,
   paginate,
   Pagination,
 } from 'nestjs-typeorm-paginate';
 import { AuthService } from 'src/auth/service/auth.service';
-// import * as bcrypt from 'bcryptjs';
-
 const bcrypt = require('bcrypt');
 
 @Injectable()
@@ -25,98 +20,93 @@ export class UserService {
     private authService: AuthService,
   ) {}
 
-  create(newUser: UserI): Observable<UserI> {
-    return this.mailExists(newUser.email).pipe(
-      switchMap((exists: boolean) => {
-        if (!exists) {
-          return this.hashPassword(newUser.password).pipe(
-            switchMap((hashedPassword: string) => {
-              newUser.password = hashedPassword;
-              return from(this.userRepository.save(newUser)).pipe(
-                switchMap((user: UserI) => this.findOne(user.id)),
-              );
-            }),
-          );
+  async create(newUser: UserI): Promise<UserI> {
+    try {
+      const exists: boolean = await this.mailExists(newUser.email);
+      if (!exists) {
+        const passwordHash = await this.hashPassword(newUser.password);
+        newUser.password = passwordHash;
+        const user = await this.userRepository.save(
+          this.userRepository.create(newUser),
+        );
+        return this.findOne(user.id);
+      } else {
+        throw new HttpException('User already exists', HttpStatus.BAD_REQUEST);
+      }
+    } catch {
+      throw new HttpException('User already exists', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async login(user: UserI): Promise<string> {
+    try {
+      const foundUser: UserI = await this.findByEmail(
+        user.email.toLocaleLowerCase(),
+      );
+      if (foundUser) {
+        const matches = await this.validatePassword(
+          user.password,
+          foundUser.password,
+        );
+        if (matches) {
+          const payload: UserI = await this.findOne(foundUser.id);
+          const token: string = await this.authService.generateJWT(payload);
+          return token;
         } else {
-          throw new HttpException(
-            'User already exists',
-            HttpStatus.BAD_REQUEST,
-          );
+          throw new HttpException('Invalid password', HttpStatus.BAD_REQUEST);
         }
-      }),
-    );
+      } else {
+        throw new HttpException('Invalid password', HttpStatus.BAD_REQUEST);
+      }
+    } catch {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
   }
 
-  login(user: UserI): Observable<string> {
-    return this.findByEmail(user.email).pipe(
-      switchMap((foundUser: UserI) => {
-        if (foundUser) {
-          return this.validatePassword(user.password, foundUser.password).pipe(
-            switchMap((matches: boolean) => {
-              if (matches) {
-                return this.findOne(foundUser.id).pipe(
-                  switchMap((user: UserI) => {
-                    const token = this.authService.generateJWT(user);
-                    return token;
-                  }),
-                );
-              } else {
-                throw new HttpException(
-                  'Invalid password',
-                  HttpStatus.BAD_REQUEST,
-                );
-              }
-            }),
-          );
-        } else {
-          throw new HttpException('User not found', HttpStatus.NOT_FOUND);
-        }
-      }),
-    );
+  async findAll(options: IPaginationOptions): Promise<Pagination<UserI>> {
+    return paginate<UserEntity>(this.userRepository, options);
   }
 
-  findAll(options: IPaginationOptions): Observable<Pagination<UserI>> {
-    return from(paginate<UserEntity>(this.userRepository, options));
+  async findAllByUsername(name: string): Promise<any | UserI> {
+    return this.userRepository.find({
+      where: {
+        username: Like(`%${name.toLocaleLowerCase()}%`),
+      },
+    });
   }
 
-  private validatePassword(
+  private async validatePassword(
     password: string,
     storedPasswordHash: string,
-  ): Observable<any | boolean> {
-    return of<any | boolean>(bcrypt.compare(password, storedPasswordHash));
+  ): Promise<any | boolean> {
+    return await bcrypt.compare(password, storedPasswordHash);
   }
 
-  //   also return the password hash
-  private findByEmail(email: string): Observable<UserI> {
-    return from(
-      this.userRepository.findOne({
-        where: { email: email },
-        select: ['id', 'username', 'email', 'password'],
-      }),
-    );
+  private async findByEmail(email: string): Promise<UserI> {
+    return await this.userRepository.findOne({
+      where: { email: email },
+      select: ['id', 'username', 'email', 'password'],
+    });
   }
 
-  private hashPassword(password: string): Observable<string> {
-    return from<string>(bcrypt.hash(password, 10));
+  private async hashPassword(password: string): Promise<string> {
+    return await bcrypt.hash(password, 10);
   }
 
-  public getOne(id: number): Promise<UserI> {
-    return this.userRepository.findOneOrFail({ where: { id: id } });
+  public async getOne(id: number): Promise<UserI> {
+    return await this.userRepository.findOneOrFail({ where: { id: id } });
   }
 
-  private findOne(id: number): Observable<UserI> {
-    return from(this.userRepository.findOne({ where: { id: id } }));
+  private async findOne(id: number): Promise<UserI> {
+    return await this.userRepository.findOne({ where: { id: id } });
   }
 
-  private mailExists(email: string): Observable<boolean> {
-    return from(this.userRepository.findOne({ where: { email: email } })).pipe(
-      map((user: UserI) => {
-        if (user) {
-          return true;
-        } else {
-          return false;
-        }
-      }),
-    );
+  private async mailExists(email: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({ where: { email: email } });
+    if (user) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
