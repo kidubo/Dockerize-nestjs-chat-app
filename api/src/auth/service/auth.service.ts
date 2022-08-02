@@ -3,7 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { from, Observable, map } from 'rxjs';
-import { UserI } from 'src/user/entities/user.interface';
+import { UserI } from 'src/user/interfaces/user.interface';
 const bcrypt = require('bcrypt');
 
 @Injectable()

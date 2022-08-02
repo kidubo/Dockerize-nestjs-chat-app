@@ -3,7 +3,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
 import { UserEntity } from '../entities/user.entity';
-import { UserI } from '../entities/user.interface';
+import { UserI } from '../interfaces/user.interface';
 import {
   IPaginationOptions,
   paginate,

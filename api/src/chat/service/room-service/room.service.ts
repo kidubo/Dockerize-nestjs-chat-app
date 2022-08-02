@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RoomEntity } from 'src/chat/entities/room.entity';
-import { RoomI } from 'src/chat/entities/room.interface';
-import { UserI } from 'src/user/entities/user.interface';
+import { RoomI } from 'src/chat/interfaces/room.interface';
+import { UserI } from 'src/user/interfaces/user.interface';
 import { Repository } from 'typeorm';
 import {
   IPaginationOptions,

@@ -1,4 +1,4 @@
-import { UserI } from 'src/user/entities/user.interface';
+import { UserI } from 'src/user/interfaces/user.interface';
 
 export class RoomI {
   id?: number;

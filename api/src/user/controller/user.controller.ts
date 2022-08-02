@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { CreateUserDto } from '../dtos/create-user.dto';
-import { UserI } from '../entities/user.interface';
+import { UserI } from '../interfaces/user.interface';
 import { UserService } from '../service/user.service';
 import { UserHelperService } from '../service/user-helper-service/user-helper-service.service';
 import { Pagination } from 'nestjs-typeorm-paginate';
 import { UserLoginDto } from '../dtos/user-login.dto';
-import { LoginResponseI } from '../entities/login-res.interface';
+import { LoginResponseI } from '../interfaces/login-res.interface';
 
 @Controller('user')
 export class UserController {
