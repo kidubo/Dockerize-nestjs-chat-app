@@ -3,9 +3,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 // import * as bcrypt from 'bcryptjs';
+import { RoomEntity } from '../../chat/entities/room.entity';
 
 @Entity()
 export class UserEntity {
@@ -25,11 +28,12 @@ export class UserEntity {
     this.email = this.email.toLowerCase();
   }
 
+  @ManyToMany(() => RoomEntity, (room) => room.users)
+  rooms: RoomEntity[];
+
   @CreateDateColumn()
   createdAt: Date;
 
-  // @BeforeInsert()
-  // async hashPassword(): Promise<any> {
-  //   this.password = await bcrypt.hash(this.password, 10);
-  // }
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
