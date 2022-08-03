@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   Entity,
   ManyToMany,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { RoomEntity } from '../../chat/entities/room.entity';
+import { ConnectedUserEntity } from '../../chat/entities/connected-user.entity';
 
 @Entity()
 export class UserEntity {
@@ -23,6 +25,9 @@ export class UserEntity {
 
   @Column({ select: false })
   password: string;
+
+  @OneToMany(() => ConnectedUserEntity, (connection) => connection.user)
+  connections: ConnectedUserEntity[];
 
   @ManyToMany(() => RoomEntity, (room) => room.users)
   rooms: RoomEntity[];

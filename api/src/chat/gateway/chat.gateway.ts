@@ -30,6 +30,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private connectedUserService: ConnectedUserService,
   ) {}
 
+  async onModuleInit() {
+    console.log('ChatGateway initialized');
+    await this.connectedUserService.deleteAll();
+  }
+
   async handleConnection(socket: Socket) {
     try {
       const decodedToken = await this.authService.verifyJwt(
@@ -45,12 +50,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           page: 1,
           limit: 10,
         });
-
         rooms.meta.currentPage = rooms.meta.currentPage - 1;
-
         // Save connection to DB
         await this.connectedUserService.create({ socketId: socket.id, user });
-
         // only emit rooms to the specific connected user / client
         return this.server.to(socket.id).emit('rooms', rooms);
       }
@@ -76,16 +78,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       room,
       socket.data.user,
     );
-
     for (const user of createdRoom.users) {
       const connections: ConnectedUserI[] =
         await this.connectedUserService.findByUser(user);
-
       const rooms = await this.roomService.getRoomsForUser(user.id, {
         page: 1,
         limit: 10,
       });
-
       for (const connection of connections) {
         await this.server.to(connection.socketId).emit('rooms', rooms);
       }
@@ -100,7 +99,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.data.user.id,
       page,
     );
-
     return this.server.to(socket.id).emit('rooms', rooms);
   }
 }
