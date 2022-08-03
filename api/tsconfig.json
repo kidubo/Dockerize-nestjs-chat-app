@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    // "module": "ES6",
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
